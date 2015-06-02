@@ -1,0 +1,134 @@
+html {
+	background-color: #060606;
+	font-family:'Roboto', 'Open Sans', Arial, sans-serif;
+	color: white;
+}
+
+h1 {
+	font-size: 37px;
+}
+
+h2 {
+	font-size: 29px;
+}
+
+#about {
+	font-size: 14px;
+	margin-bottom: 10px;
+}
+
+#about p {
+	font-size: 14px;
+	margin: 0;
+	padding: 0;
+}
+
+#loading {
+	color: red;
+	margin-bottom: 10px;
+}
+
+#events {
+	margin-bottom: 10px;
+}
+
+.eventName {
+	width: 100%;
+	float: left;
+}
+
+.needs {
+	margin-right: 10px;
+	float: left;
+}
+
+.userContainer {
+	width: 500px;
+}
+
+.userHeader {
+	color: #f5f5f5;
+	font-size: 18px;
+	width: 100%;
+	float: left;
+	margin-bottom: 5px;
+}
+
+.charContainer {
+	padding-top: 5px;
+	padding-bottom: 5px;
+	width: 33%;
+	float: left;
+	
+}
+
+.charHeader {
+	font-size: 18px;
+	float: left;
+	width: 100%;
+	margin-bottom: 5px;
+}
+
+.currencyContainer {
+	float: left;
+	width: 50%;
+	height: 35px;
+	margin-bottom: 5px;
+}
+
+.currencies {
+	position: relative;
+	display: inline-block;
+	vertical-align: top;
+	width: 35px;
+	height: 35px;
+	background-image: url(http://static01.bungie.net/img/theme/destiny/icons/sprite_destiny_currencies.png);
+}
+
+.VM {
+	background-position: -43px 0;
+}
+
+.CM {
+	background-position: 0, 0;
+}
+
+.currencyText {
+	margin-top: 10px;
+	margin-left: 5px;
+	font-size: 14px;
+	position: relative;
+	display: inline-block;
+	width: 40px;
+}
+
+.acts {
+	font-size: 12px;
+	float: left;
+	width: 100%;
+	margin-bottom: 5px;
+}
+
+.actComplete {
+	color: PaleGoldenRod;
+}
+
+.actIncomplete {
+	color: #999999;
+}
+
+.NF {
+
+}
+
+.WH {
+
+}
+
+.VoG {
+
+}
+
+.CE {
+
+}

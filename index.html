@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!--[if IE]><script src="https://code.jquery.com/jquery-1.9.1.min.js"></script><![endif]-->
+<![if !IE]><script src="https://code.jquery.com/jquery-2.1.3.min.js"></script><![endif]>
+<script type="text/javascript">
+var hashes = {
+	3159615086: 'glimmer',
+	1415355184: 'crucible marks',
+	1415355173: 'vanguard marks',
+	898834093: 'exo',
+	3887404748: 'human',
+	2803282938: 'awoken',
+	3111576190: 'male',
+	2204441813: 'female',
+	671679327: 'hunter',
+	3655393761: 'titan',
+	2271682572: 'warlock',
+	3871980777: 'New Monarchy',
+	529303302: 'Cryptarch',
+	2161005788: 'Iron Banner',
+	452808717: 'Queen',
+	3233510749: 'Vanguard',
+	1357277120: 'Crucible',
+	2778795080: 'Dead Orbit',
+	1424722124: 'Future War Cult'
+};
+
+var weeklyMarks = {
+	2033897742: 'VM',
+	2033897755: 'CM'
+};
+
+var activityHashes = {
+	1564581372: "The Will of Crota",
+	1564581373: "The Will of Crota",
+	1564581374: "The Will of Crota",
+	2071946061: "Winter's Run",
+	2071946062: "Winter's Run",
+	2071946063: "Winter's Run",
+	2418687432: "The Nexus",
+	2418687433: "The Nexus",
+	2418687435: "The Nexus",
+	2619245816: "The Will of Crota",
+	2619245818: "The Will of Crota",
+	2619245819: "The Will of Crota",
+	325091109: "The Will of Crota",
+	325091110: "The Will of Crota",
+	325091111: "The Will of Crota",
+	3468792472: "The Devil's Lair",
+	3468792473: "The Devil's Lair",
+	3468792474: "The Devil's Lair",
+	3896672076: "Summoning Pits",
+	3896672078: "Summoning Pits",
+	3896672079: "Summoning Pits",
+	3992306896: "The Will of Crota",
+	3992306898: "The Will of Crota",
+	3992306899: "The Will of Crota",
+	692589233: "Cerberus Vae III",
+	692589234: "Cerberus Vae III",
+	692589235: "Cerberus Vae III",
+	921825796: "The Will of Crota",
+	921825797: "The Will of Crota",
+	921825799: "The Will of Crota",
+	325091108: "The Will of Crota",
+	3896672077: "Summoning Pits",
+	2418687434: "The Nexus",
+	1564581375: "The Will of Crota",
+	2071946060: "Winter's Run",
+	2619245817: "The Will of Crota",
+	3468792475: "The Devil's Lair",
+	3992306897: "The Will of Crota",
+	692589232: "Cerberus Vae III",
+	921825798: "The Will of Crota",
+	2659248071: "Vault of Glass",
+	2659248068: "Vault of Glass",
+	2591274210: "The Devil's Lair",
+	3304208793: "Cerberus Vae III",
+	2495639390: "Winter's Run"
+};
+
+// Raid hash values. 
+var crotasEnd = 1836893116;
+var vogEasy = 2659248071;
+var vogHard = 2659248068;
+
+// Platform variables.
+var platform = 1;
+var platforms = {1 : '' + 'TigerXbox' + '', 2 : 'TigerPSN'};
+
+// Search indicator.
+var isClanSearch = false;
+
+// Timed Event Hash IDs
+var heroics = {};
+var heroic = 0;
+var nightfall = 0;
+
+// Array to hold callback functions, usage example below:
+// var index = (array.push(function(x){alert(x)} ) - 1);
+// array[index](id);
+var callbacks = [];
+
+// Timed events needs lists
+var needsNightFall = []; // TODO - replace these with some cool objects
+var needsWeekly = [];
+var needsVog = [];
+var needsCE = [];
+
+// User data
+var userList = [];
+var playerData = [];
+var loadedCount = 0;
+var charCount = 0;
+
+// Weekly timed event reset time.
+var weeklyResetTime = getResetTime();
+
+// Utility to capitalize a string.
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+}
+
+// Utility to trim leading and trailing whitespace on a string (if not defined already).
+if(!String.prototype.trim) {  
+  String.prototype.trim = function () {  
+    return this.replace(/^\s+|\s+$/g,'');  
+  };  
+} 
+
+// Utility to perform AJAX request for JSONP using YQL as a proxy.
+function getJson(url, success, failure) {
+	var urlQuery = 'select * from json where url="' + url + '"';
+	return $.ajax({
+		url: 'https://query.yahooapis.com/v1/public/yql',
+		data: {
+			q: urlQuery,
+			format: "json"
+		},
+		dataType: "jsonp",
+		success: function (data) {
+			success(data);
+		},
+		error: function (result) {
+			failure(result);
+		}
+	});
+}
+
+// Utility to get the weekly timed event reset time (Tuesday at 9:00AM UTC).
+function getResetTime() {
+	// Get the current local time by creating a new date object.
+	var resetTime = new Date();
+	var offset = 0;
+	
+	// Check if it is not currently Tuesday in UTC time.
+	if (resetTime.getUTCDay() != 2) {
+		// Tues = 2 so subtract it from the current UTC day, if less than 0 add a week to the offset
+		offset = resetTime.getUTCDay() - 2;
+		if (offset < 0) {
+			offset += 7;
+		}
+	} else if (resetTime.getUTCHours() < 9) {
+		// If it is Tuesday and not 9am yet then the reset is still last week so offset is 7.
+		offset = 7;
+	}
+	    
+	resetTime.setUTCDate(resetTime.getUTCDate() - offset);
+	resetTime.setUTCHours(9);
+	resetTime.setUTCMinutes(0);
+  resetTime.setUTCSeconds(0);
+	
+	return resetTime;
+}
+
+function clanSearch(id) {
+	isClanSearch = true;
+		
+	// TODO - only 50 members per page so for giant clans will need to keep checking pages until no results left
+	// totalResults / 50 rounded up
+	// 135331
+	getJson('https://www.bungie.net/Platform/Group/' + id + '/MembersV3/?currentPage=1',
+		function(data) {
+			if (!data || !data.query || !data.query.results || !data.query.results.json || !data.query.results.json.Response) {
+				clanSearch();
+				return;
+			}
+			var results = data.query.results.json.Response.results; 
+			if (!results) {
+				$('#clanName').append('Clan ID ' + id + ' not found');
+			}
+			buildUserLists(results);
+		},
+		function(error) {
+			// TODO - error stuff
+		});
+}
+
+function buildUserLists(results) {
+	var i;
+	if (platform == 1) {
+		for (i = 0; i < results.length; ++i) {
+			if (results[i].user.xboxDisplayName) {
+				userList.push(results[i].user.xboxDisplayName);
+			}		
+		}
+	} else {
+		for (i = 0; i < results.length; ++i) {
+			if (results[i].user.psnDisplayName) {
+				userList.push(results[i].user.psnDisplayName);
+			}		
+		}
+	}
+		
+	userList.sort();
+	getUsers();
+}
+
+function getUsers() {
+	for (var i = 0; i < userList.length; i++) {
+		var url = 'https://www.bungie.net/Platform/Destiny/SearchDestinyPlayer/' + platform + '/' + userList[i] + '/';
+		var index = (callbacks.push(function(i) {
+			return function (data) {
+				if (!data || !data.query || !data.query.results || !data.query.results.json || !data.query.results.json.Response) {
+					// TODO - handle null data - note this can be null if doing a clan search and certain users do not have destiny on this platform!
+					// TODO - output user not found...
+					userList.splice(i, 1);
+					return;
+				}
+				var player = data.query.results.json.Response;
+				playerData[i] = {name : player.displayName, membershipId : player.membershipId};
+				
+				var charUrl = 'https://www.bungie.net/Platform/Destiny/' + platforms[platform] + '/Account/' + player.membershipId + '/';
+				var charIndex = (callbacks.push(function(i) {
+					return function (data) {
+						if (!data || !data.query || !data.query.results || !data.query.results.json || !data.query.results.json.Response) {
+							// TODO - handle null data
+						}
+						var characters = data.query.results.json.Response.data.characters;
+						// If user only has one character than the JSON does not return an array of characters, so just create a single entry array.
+						if (Object.prototype.toString.call( characters ) !== '[object Array]' ) {
+							characters = [characters];
+						}
+						
+						// If this is the first player and a clan search was performed then output the clan name.
+						if (i === 0 && isClanSearch) {
+							var clanString;
+							if (data.query.results.json.Response.data.clanName) {
+								clanString = data.query.results.json.Response.data.clanName;
+							}
+							if (data.query.results.json.Response.data.clanTag) {
+							 clanString += ' [' + data.query.results.json.Response.data.clanTag + ']';
+							}
+							$('#clanName').append(clanString);
+						}
+						
+						parseCharacterData(i, characters);
+					};}) - 1);
+				getJson(charUrl, callbacks[charIndex](i), function(result) {});
+			};}) - 1);
+		// TODO - add error handling (output user not found or something)
+		getJson(url, callbacks[index](i), function(result) {});
+	}
+}
+
+function parseCharacterData(playerIndex, characters) {	
+	playerData[playerIndex].charCount = characters.length;
+	playerData[playerIndex].characters = [];
+	
+	charCount += characters.length;
+	for (var charIndex = 0; charIndex < characters.length; charIndex++) {
+		
+		playerData[playerIndex].characters[charIndex] = {
+			level : parseInt(characters[charIndex].characterLevel),
+			charClass : hashes[characters[charIndex].characterBase.classHash].capitalize(),
+			headerHtml : '<div class="charContainer"><div class="charHeader">' + characters[charIndex].characterLevel + ' ' + hashes[characters[charIndex].characterBase.classHash].capitalize() + '</div>',
+			marksHtml : '',
+			actsHtml : '',
+			raidHtml : '',
+			loaded : false};
+		
+		var lastPlayed = new Date(characters[charIndex].characterBase.dateLastPlayed);
+		if (lastPlayed > weeklyResetTime) {		
+				var progUrl = 'https://www.bungie.net/Platform/Destiny/' + platforms[platform] + '/Account/' + playerData[playerIndex].membershipId + '/Character/' + characters[charIndex].characterBase.characterId + '/Progression/';
+				var actUrl = 'https://www.bungie.net/Platform/Destiny/' + platforms[platform] + '/Account/' + playerData[playerIndex].membershipId + '/Character/' + characters[charIndex].characterBase.characterId + '/Activities/?definitions=true';
+				var raidUrl = 'http://www.bungie.net/platform/Destiny/Stats/ActivityHistory/' + platforms[platform] + '/' + playerData[playerIndex].membershipId + '/' + characters[charIndex].characterBase.characterId + '/?mode=Raid&page=0';
+								
+				var progIndex = (callbacks.push(function(playerIndex, charIndex) {
+					return function (data) {
+						if (!data || !data.query || !data.query.results || !data.query.results.json || !data.query.results.json.Response) {
+							// TODO - error handling ... need to retry...
+							return;
+						}
+						var progressions = data.query.results.json.Response.data.progressions; // TODO - probably check for null data...
+						for (var progIndex = 0; progIndex < progressions.length; progIndex++) {
+							if (weeklyMarks[progressions[progIndex].progressionHash]) {
+								var marksType = weeklyMarks[progressions[progIndex].progressionHash];
+								playerData[playerIndex].characters[charIndex].marksHtml += '<div class="currencyContainer"><div class="' + marksType + ' currencies"></div><div class="currencyText">' + progressions[progIndex].level + '</div></div>';
+							}
+						}
+					};
+				}) - 1);
+				
+				var actIndex = (callbacks.push(function(playerIndex, charIndex) {
+					return function (data) {
+						if (!data || !data.query || !data.query.results || !data.query.results.json || !data.query.results.json.Response) {
+							// TODO - error handling ... need to retry...
+							return;
+						}
+						// Check for activities if player is 20 or greater, otherwise they cannot attempt weeklies or raids.						
+						if (playerData[playerIndex].characters[charIndex].level >= 20) { // TODO - probably move this out to the when and only get marks when less than 20...
+							// If nightfall hash is 0 then figure out what it is this week otherwise the work is already done and the hash is ready to use.
+							if (!nightfall) {
+								var defintions = data.query.results.json.Response.definitions.activities;
+								$.each(defintions, function(key, value) {				
+									if (value.activityName == 'Weekly Heroic Strike') {
+											heroics[value.activityHash] = value.activityLevel;
+									}
+									else if ((value.activityLevel == 30) && (value.activityName == 'Weekly Nightfall Strike')) {
+											nightfall = value.activityHash;
+									}			
+								});
+								$('#events').append('<div class="eventName">Weekly Strike: ' + activityHashes[nightfall] + '</div>');
+							}
+						
+							var hasNF;
+							var whLevel = '';
+							var activities = data.query.results.json.Response.data.available;				
+							for (var actIndex = 0; actIndex < activities.length; actIndex++) {
+								
+								var actHash = activities[actIndex].activityHash;
+								if (heroics[actHash] && activities[actIndex].isCompleted === 'true') {
+									whLevel = heroics[actHash];
+								} else if (activities[actIndex].activityHash == nightfall) {
+									hasNF = activities[actIndex].isCompleted;
+								}
+							}
+							
+							if (hasNF !== 'true') {
+								needsNightFall.push(userList[playerIndex]);
+							}
+							if (!whLevel) {
+								needsWeekly.push(userList[playerIndex]);
+							}
+							
+							playerData[playerIndex].characters[charIndex].actsHtml = '<div class="NF acts ' + (hasNF === 'true' ? 'actComplete' : 'actIncomplete') + '">Nightfall</div><div class="WH acts ' + (whLevel ? 'actComplete' : 'actIncomplete') + '">Weekly Heroic ' + whLevel +'</div>';
+						} else {
+							playerData[playerIndex].characters[charIndex].actsHtml = '<div class="NF acts actIncomplete">Nightfall</div><div class="WH acts actIncomplete">Weekly Heroic</div>';
+						}
+					};
+				}) - 1);	
+				
+				var raidIndex = (callbacks.push(function(playerIndex, charIndex) {
+					return function (data) {
+						if (!data || !data.query || !data.query.results || !data.query.results.json || !data.query.results.json.Response) {
+							// TODO - error handling ... need to retry...
+							return;
+						}
+						if (playerData[playerIndex].characters[charIndex].level >= 20) { // TODO - probably move this out to the when and only get marks when less than 20...
+							var hasVogEasy = false;
+							var hasVogHard = false;
+							var hasCE = false;
+							// If a character has never attempted a raid then data will be null.
+							if (data.query.results.json.Response.data) {
+								var activities = data.query.results.json.Response.data.activities;
+								for (var i = 0; i < activities.length; i++) {
+									var activityDate = new Date(activities[i].period);
+									if (activityDate > weeklyResetTime) {
+										if (activities[i].activityDetails.referenceId == crotasEnd) {
+											if (!hasCE) {
+												hasCE = (activities[i].values.completed.basic.value === '1.0');
+											}
+										} else if (activities[i].activityDetails.referenceId == vogEasy) {
+											if (!hasVogEasy) {
+												hasVogEasy = (activities[i].values.completed.basic.value === '1.0');
+											}
+										} else if (activities[i].activityDetails.referenceId == vogHard) {
+											if (!hasVogHard) {
+												hasVogHard = (activities[i].values.completed.basic.value === '1.0');
+											}
+										
+										}
+									} else {
+										break;
+									}
+								}
+							}
+							
+							if (!hasCE) {
+								needsCE.push(userList[playerIndex]);
+							}
+							if (!hasVogEasy && !hasVogHard) {
+								needsVog.push(userList[playerIndex]);
+							}
+							
+							// Output raid status and close character container.
+							var levelString = hasVogHard ? '30' : hasVogEasy ? '26' : '';
+							playerData[playerIndex].characters[charIndex].raidHtml = '<div class ="VoG acts ' + (levelString ? 'actComplete' : 'actIncomplete') + '">Vault of Glass ' + levelString + '</div>' +
+													'<div class ="CE acts ' + (hasCE ? 'actComplete' : 'actIncomplete') + '">Crota\'s End</div></div>';			
+						} else {
+							playerData[playerIndex].characters[charIndex].raidHtml = '<div class="VoG acts actIncomplete">Vault of Glass</div><div class="CE acts actIncomplete">Crota\'s End</div></div>';
+						}
+					};
+				}) - 1);
+				
+				$.when(
+					// Get progressions (for weekly mark caps)
+					getJson(progUrl, callbacks[progIndex](playerIndex, charIndex), function(result) {}), // TODO - can just pass character object instead of two indexes???								
+					// Get activity data (for weekly strikes)
+					getJson(actUrl, callbacks[actIndex](playerIndex, charIndex), function(result) {}),
+					// Get raid data
+					getJson(raidUrl, callbacks[raidIndex](playerIndex, charIndex), function(result) {})
+				).then(function() {
+					handleCharLoaded();
+				});
+		} else {
+			// Player hasn't played since the weekly reset so mark them as loaded, needing everything, and populate HTML indicating activities incomplete and 0 marks.		
+			if (parseInt(characters[charIndex].characterLevel) >= 20) {
+				needsNightFall.push(userList[playerIndex]);
+				needsWeekly.push(userList[playerIndex]);
+				needsCE.push(userList[playerIndex]);
+				needsVog.push(userList[playerIndex]);
+			}
+			
+			playerData[playerIndex].characters[charIndex].marksHtml = '<div class="currencyContainer"><div class="VM currencies"></div><div class="currencyText">0</div></div><div class="currencyContainer"><div class="CM currencies"></div><div class="currencyText">0</div></div>';
+			playerData[playerIndex].characters[charIndex].actsHtml = '<div class="NF acts actIncomplete">Nightfall</div><div class="WH acts actIncomplete">Weekly Heroic</div>';
+			playerData[playerIndex].characters[charIndex].raidHtml = '<div class="VoG acts actIncomplete">Vault of Glass</div><div class="CE acts actIncomplete">Crota\'s End</div></div>';
+			playerData[playerIndex].characters[charIndex].loaded = true;
+			
+			// TODO - this is kinda hacky...
+			var neededCallbacks = userList.length * 2;
+			if (isClanSearch) {neededCallbacks++;} 
+			if (callbacks.length > neededCallbacks) {
+				handleCharLoaded();
+			} else {
+				loadedCount++;
+			}
+		}
+	}
+}
+
+function handleCharLoaded() {
+	loadedCount++;
+	if (loadedCount === charCount) {					
+		// Output who needs what.
+		$('#events').append('<div class="needs"><p>Needs Nightfall:</p>' + getNeedString(needsNightFall) + '</div>' +
+			'<div class="needs"><p>Needs Weekly:</p>' + getNeedString(needsWeekly) + '</div>' +
+			'<div class="needs"><p>Needs Crota\'s End:</p> ' + getNeedString(needsCE) + '</div>' +
+			'<div class="needs"><p>Needs Vault of Glass:</p>' + getNeedString(needsVog) + '</div>');
+		
+		// Output all players character data.
+		var outputString = '';
+		for (var p = 0; p < playerData.length; p++) {
+			outputString += '<div class="userContainer" id="user_' + p + '"><div class="userHeader">'+ playerData[p].name +'</div>';
+			for (var c = 0; c < playerData[p].characters.length; c++) {
+				outputString += (playerData[p].characters[c].headerHtml +
+				playerData[p].characters[c].marksHtml + 
+				playerData[p].characters[c].actsHtml + 
+				playerData[p].characters[c].raidHtml);
+			}
+			outputString += '</div>';
+		}
+		$('#container').append(outputString);
+	}
+}
+
+function getNeedString(users) {
+	if (!users || users.length === 0) {
+		return "Nobody";
+	}
+	users.sort();
+	var needString = "";
+	var dupeCount = 0;
+	needString += '<ul><li>';
+	for (var i = 0; i < users.length; i++) {
+		
+		if (i && users[i] == users[i - 1]) {
+			dupeCount++;
+		} else {
+			if (dupeCount) {
+				needString += (' x ' + (dupeCount + 1));
+				dupeCount = 0;
+			}
+			if (i) {
+				needString += '</li><li>';
+			}
+			needString += users[i];
+		}
+	}
+	if (dupeCount) {
+		needString += (' x ' + (dupeCount + 1));
+	}
+	
+	if (users.length > 0) {
+		needString += '</li></ul>';
+	}
+	
+	return needString;
+}
+
+// TODO - work in progress handling form !!!
+function GetUrlValue(VarSearch){
+    var SearchString = window.location.search.substring(1);
+    var VariableArray = SearchString.split('&');
+    for(var i = 0; i < VariableArray.length; i++){
+        var KeyValuePair = VariableArray[i].split('=');
+        if(KeyValuePair[0] == VarSearch){
+            return KeyValuePair[1];
+        }
+    }
+}
+
+function handleForm(theForm) {
+	
+	//alert(theForm.users.value + " " + theForm.platform.value);
+	
+	// Pass to common validation function that is called here and in searchUsingParams
+	
+	// If form data is invalid then output error message and return false
+	// Otherwise return true so the form is submitted
+	//clanSearch(135331);
+	//return false;
+}
+
+function searchUsingParams() {
+
+	// Call common validation function ... maybe just let the form always submit then validate it here instead of calling the validate twice
+
+	var usersParam = GetUrlValue("u");
+	var platformParam = GetUrlValue("platform");
+	
+	//$('#searchText').val(usersParam);
+	//$('#platform').val(platformParam);
+	/*
+	var form = document.forms['searchForm'];
+	form.elements['users'].value = usersParam;
+	form.elements['platform'].value = platformParam;
+	$*/
+	
+	if (platformParam == 1 || platformParam == 2) {
+		platform = platformParam;
+	}
+	
+	if (usersParam) {
+		if ($.isNumeric(usersParam)) {
+			clanSearch(usersParam);
+		} else {
+			//userList = usersParam.split("+"); // todo - need to use commas to split, not spaces (xbox names can have spaces in them)
+			usersParam = decodeURIComponent((usersParam + '').replace(/\+/g, '%20'));
+			//alert(usersParam);
+			//userList = usersParam.split("%2C");
+			userList = usersParam.split(",");
+			
+			// Trim leading and trailing whitespace.
+			for (var i = 0; i < userList.length; i++) {
+				//alert(userList[i]);
+				userList[i] = userList[i].trim();
+			}
+			// TODO - handle user list...
+			/*
+			var both = /^[0-9a-zA-Z]+$/;  
+			var letters = /^[a-zA-Z]+$/;  
+
+			for (var i = 0; i , userList.length; i++) {
+				
+				var userName = userList[i];
+				if(userName.charAt(0).match(letters) === false || !userName.match(both)) {
+					alert(userList[i] + " is invalid");
+					userList[i].splice(i, 1);
+				}
+			}
+			*/
+			getUsers();
+		}
+	}
+}
+
+// END WORK IN PROGRESS HANDLING FORM
+/*
+var dots;
+function startLoadingAnimation() {
+	dots = window.setInterval( function() {
+	var wait = document.getElementById("dots");
+	if ( wait.innerHTML.length > 2 ) {
+			wait.innerHTML = "";
+	} else {
+			wait.innerHTML += ".";
+	}}, 250);
+}
+function stopLoadingAnimation() {
+    clearInterval(dots);
+}
+*/
+
+$( document ).ready(searchUsingParams());
+//$( document ).ready(clanSearch(135331));
+</script>
+<link rel="stylesheet" type="text/css" href="style.css">
+<link href='https://fonts.googleapis.com/css?family=Roboto:400,100,100italic,300,300ita??lic,400italic,500,500italic,700,700italic,900italic,900' rel='stylesheet' type='text/css'>
+</head>
+<body>
+<h1>Destiny Clan Status</h1>
+<div id="about">
+<p>This web page is testing the possibility of polling the status of an entire clan from Bungie.net.</p>
+<p>To search by clan you must enter your clan ID found on the clan tab of your Bungie.net page (example http://www.bungie.net/en/Clan/Detail/YOUR_ID_HERE)</p>
+<p>The mark numbers displayed are how many marks were collected during the current week counting towards the max 100.</p>
+<p><span class="actComplete">Yellow</span> means complete. <span class="actIncomplete">Gray</span> means incomplete.</p>
+</div>
+
+<form id="searchForm" onsubmit="return handleForm(this);">
+<fieldset>
+ID or Users:
+<input type="text" name="u" id="searchText" size="60" placeholder="Enter Clan ID or comma separated Gamertags here">
+<input type="radio" name="platform" value="1" checked>XBL
+<input type="radio" name="platform" value="2">PSN
+<input type="submit" value="Submit"></fieldset>
+</form>
+<div id="messageArea"></div>
+<h2 id="clanName"></h2>
+<div id="events"></div>
+<div id="container">
+</div>
+</body>
+</html>
